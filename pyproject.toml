@@ -1,0 +1,12 @@
+[project]
+name = "pyrooplpp"
+version = "1.0.0"
+description = "A Python implementation of ROOPL++, a Reversible Object-Oriented Programming Language"
+requires-python = ">=3.10"
+license = {text = "GPL-3.0-or-later"}
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0"]
+
+[project.scripts]
+pyrooplpp = "main:main"
