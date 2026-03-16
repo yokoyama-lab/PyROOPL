@@ -1,9 +1,10 @@
 """Advanced evaluator tests to increase coverage."""
 import pytest
 from pyrooplpp.parser import parse
-from pyrooplpp.eval import eval_prog, eval_exp, eval_state, comp_op_eq, rel_op
+from pyrooplpp.eval import eval_prog, eval_exp, comp_op_eq, rel_op
 from pyrooplpp.value import *
 from pyrooplpp.syntax import *
+from .conftest import run_src
 
 
 class TestEvalDotAccess:
@@ -74,8 +75,8 @@ class TestEvalArrayOps:
         a[1] -= 10
         a[0] -= 5
         delete int[3] a"""
-        r = dict(eval_prog(parse(src)))
-        # After delete, a should be IntVal(0)
+        r = run_src(src)
+        assert r["a"] == IntVal(0)  # array deleted, variable is nil
 
     def test_array_not_nil_error(self):
         src = """class Program

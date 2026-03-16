@@ -306,13 +306,4 @@ class Program
         result = eval_prog(parse(src))
         assert ("x", IntVal(5)) in result
 
-    def test_fib_example(self):
-        """Test the classic Fibonacci example file."""
-        import os
-        fib_path = os.path.join(os.path.dirname(__file__), "..", "example", "fib.rplpp")
-        if os.path.exists(fib_path):
-            with open(fib_path) as f:
-                prog = parse(f.read())
-            result = eval_prog(prog)
-            result_dict = dict(result)
-            assert result_dict["result"] == IntVal(8)  # fib(4) pair -> 8
+    # fib example test moved to test_integration.py::TestSpecificAlgorithms
