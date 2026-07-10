@@ -1,6 +1,6 @@
 """AST data type definitions for ROOPL++."""
 from __future__ import annotations
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum, auto
 from typing import Optional
 
@@ -301,6 +301,10 @@ class CDecl:
     inherits: Optional[TypeId]
     fields: list[Decl]
     methods: list[MDecl]
+    # Names of fields declared as program output (`output x, y`). Only meaningful
+    # for the class that defines `main`. Empty means no output declaration, in
+    # which case every field is treated as output (legacy behaviour).
+    output: list[str] = field(default_factory=list)
 
 
 # --- Program ---

@@ -169,8 +169,10 @@ def pretty_methods(methods: list[MDecl]) -> str:
 
 def pretty_class(c: CDecl) -> str:
     inher = f" inherits {c.inherits}" if c.inherits else ""
+    output = f"output {', '.join(c.output)}\n    " if c.output else ""
     return (f"class {c.name}{inher}\n    "
             + pretty_fields(c.fields) + "\n    "
+            + output
             + pretty_methods(c.methods))
 
 

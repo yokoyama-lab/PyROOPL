@@ -41,6 +41,7 @@ class TT(Enum):
     NEW = auto(); DELETE = auto()
     COPY = auto(); UNCOPY = auto()
     SHOW = auto(); PRINT = auto()
+    OUTPUT = auto()
     EOF = auto()
 
 
@@ -60,6 +61,7 @@ KEYWORDS = {
     "new": TT.NEW, "delete": TT.DELETE,
     "copy": TT.COPY, "uncopy": TT.UNCOPY,
     "show": TT.SHOW, "print": TT.PRINT,
+    "output": TT.OUTPUT,
 }
 
 # Multi-char operators (order matters: longest match first)

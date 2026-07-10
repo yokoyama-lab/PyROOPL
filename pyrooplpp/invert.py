@@ -116,5 +116,5 @@ def invert_prog(prog: Prog) -> Prog:
     inv_classes = []
     for c in prog.classes:
         inv_methods = [invert_method(m) for m in c.methods]
-        inv_classes.append(CDecl(c.name, c.inherits, c.fields, inv_methods))
+        inv_classes.append(CDecl(c.name, c.inherits, c.fields, inv_methods, c.output))
     return Prog(inv_classes)

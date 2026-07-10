@@ -51,6 +51,52 @@ python main.py -library example/LinkedList.rplpp
 | Object lifecycle | `new C x` / `delete C x` | Symmetric allocation |
 | Local scoping | `local T x = e1 ... delocal T x = e2` | Scoped with cleanup assertion |
 
+## Output Declaration and Clean Termination
+
+By default (and for every program in `example/`), an executed program prints the
+final value of **all** top-level `Program` fields — there is no distinction
+between "output" and "leftover garbage".
+
+An optional `output` declaration in the main class makes that distinction
+explicit, mirroring the clean-termination model of reversible languages such as
+Janus:
+
+```
+class Program
+    int r
+    int n
+    output r          // r is the output; every other field must vanish
+    method main()
+        n += 4
+        call ...(n, r) // compute r from n, then uncompute n back to 0
+```
+
+When an `output` declaration is present, after `main` finishes the interpreter:
+
+- returns/prints **only** the declared output fields, and
+- checks that **every non-output field is clean** — integers back to `0`, object
+  references back to `nil`, and arrays with all elements `0`. A violation raises
+  a runtime error, e.g. `Non-clean termination: field 'n' = 4 (expected 0)`.
+
+Programs **without** an `output` declaration keep the legacy behaviour (all
+fields returned, no clean check), so the 139 bundled examples run unchanged.
+
+**Exit codes:** runtime errors — including non-clean termination — exit with a
+non-zero status (previously the interpreter exited `0` on runtime errors). Parse
+errors already exit non-zero. This lets external verifiers detect failure without
+scraping stdout.
+
+## Semantics Notes
+
+- **`&&` and `||` are non-short-circuit.** Both operands are always evaluated,
+  matching the OCaml ROOPL++ reference implementation. Because ROOPL++
+  expressions are side-effect free, this yields the same result value as a
+  short-circuit evaluation would; the two differ only when the right operand
+  raises an error (e.g. division by zero or an out-of-bounds array access),
+  which non-short-circuit evaluation surfaces rather than suppresses. Fidelity
+  to the reference semantics is preferred over the guard-expression convenience
+  that short-circuiting would allow.
+
 ## Example
 
 ```

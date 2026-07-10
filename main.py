@@ -43,6 +43,9 @@ def main():
         except RuntimeError as e:
             print()
             print(str(e))
+            # Runtime errors (including non-clean termination) exit non-zero so
+            # external verifiers can detect failure without scraping stdout.
+            sys.exit(1)
 
 
 if __name__ == "__main__":

@@ -1,6 +1,24 @@
 # 引き継ぎ: ROOPL++／PyROOPL への入出力機構の追加
 
 作成: 2026-07-10（横山研・gen_janus プロジェクトからの依頼）
+
+## 実装状況（2026-07-10 PyROOPL 側で対応済み）
+
+**推奨案 A（出力宣言＋非出力クリーン検査）と exit コードの是正（補足 #1）を実装した。** gen_janus 側の検証器・参照解答・プロンプト部品はこの仕様に合わせて対応してよい。
+
+- **構文**: main を持つクラス本体に `output id, id, ...` 宣言行を追加できる（フィールド宣言の後・メソッド宣言の前）。専用キーワード `output` を追加。宣言は複数行可。
+- **意味論**: `output` 宣言があるとき、`main` 実行後に
+  - 宣言された出力フィールドの最終値**のみ**を返す／表示する、
+  - **非出力フィールドはすべてクリーン**であることを検査する（整数=0、オブジェクト参照=nil、配列=全要素0）。破れれば実行時エラー `ERROR:Non-clean termination: field 'k' = 3 (expected 0)`（配列は `field 'xs[1]' = 9`、生存オブジェクトは `field 'p' is a live object (expected nil)`）。
+  - 出力名が実フィールドでなければ `ERROR:output field 'q' is not a field of class Program`。
+- **後方互換**: `output` 宣言の無いプログラムは従来どおり全フィールドを返し、クリーン検査もしない（`example/` の139例題は無改変で通過）。**`example/` には `output` を使う例は追加していない**（OCaml 版が未対応で gen_janus 差分テストのパースを壊すため）。仕様の実行例は `tests/test_output.py` を参照。
+- **exit コード**: 実行時エラー（非クリーン終了を含む）で **exit 1** を返すようにした（従来は実行時エラーでも exit 0）。stdout に出る `ERROR...` メッセージは従来どおり。副作用として `example/algo_josephus.rplpp`（既知の配列範囲外バグ）と `example/callValue_error.rplpp`（意図的エラー例）が exit 1 になる（出力内容は不変）。
+- **未対応**: 案 B（明示的入出力文 `read`/`write`）は将来課題のまま。未決事項3（オブジェクト参照フィールドの nil 必須）は「生存オブジェクト参照＝非クリーン」として実装（nil = IntVal 0 のみ clean）。
+
+以下は当初の依頼内容（記録として保存）。
+
+---
+
 起票元: 可逆言語をまたいだ LLM コード生成能力の比較評価（卒研ネタ9第1段）
 関連: `github.com/tetsuo-jp/gen_janus`（private）の `260708_roopl/`（ROOPL++ 検証器・参照解答15本）
 

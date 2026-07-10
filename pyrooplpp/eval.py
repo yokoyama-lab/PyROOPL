@@ -152,6 +152,13 @@ def eval_exp(exp: Exp, env: Env, st: State) -> Value:
                 BinOp.Mod: lambda: bin_op(safe_mod, eval_exp(e1, env, st), eval_exp(e2, env, st)),
                 BinOp.Band: lambda: bin_op(lambda a, b: a & b, eval_exp(e1, env, st), eval_exp(e2, env, st)),
                 BinOp.Bor: lambda: bin_op(lambda a, b: a | b, eval_exp(e1, env, st), eval_exp(e2, env, st)),
+                # && and || are NON-short-circuit: both operands are always
+                # evaluated, matching the OCaml ROOPL++ reference (eval.ml applies
+                # `rel_op (&&)` / `rel_op (||)` to already-evaluated operands).
+                # ROOPL++ expressions are side-effect free, so the result value is
+                # identical to a short-circuit evaluation; they differ only when the
+                # right operand would raise (e.g. division by zero). Keeping both
+                # operands eager preserves fidelity with the reference semantics.
                 BinOp.And: lambda: rel_op(lambda a, b: a and b, eval_exp(e1, env, st), eval_exp(e2, env, st)),
                 BinOp.Or: lambda: rel_op(lambda a, b: a or b, eval_exp(e1, env, st), eval_exp(e2, env, st)),
                 BinOp.Lt: lambda: comp_op_int(lambda a, b: a < b, eval_exp(e1, env, st), eval_exp(e2, env, st)),
@@ -664,9 +671,14 @@ def gen_st(env: Env, objval: Value) -> State:
     return st
 
 
-def gen_result(env: Env, st: State) -> list[tuple[str, Value]]:
+def gen_result(env: Env, st: State,
+               only: set[str] | None = None) -> list[tuple[str, Value]]:
     result = []
     for name, locs in env.items():
+        if name == "this":
+            continue
+        if only is not None and name not in only:
+            continue
         v = lookup_st(locs, st)
         match v:
             case LocsVec(vec):
@@ -675,6 +687,32 @@ def gen_result(env: Env, st: State) -> list[tuple[str, Value]]:
             case _:
                 result.append((name, v))
     return result
+
+
+def check_clean(name: str, v: Value, st: State) -> None:
+    """Raise if a non-output field is not cleanly consumed (0 / nil / all-zero array)."""
+    match v:
+        case IntVal(n):
+            if n != 0:
+                raise RuntimeError(
+                    f"ERROR:Non-clean termination: field '{name}' = {n} (expected 0)")
+        case LocsVec(vec):
+            for i, l in enumerate(vec):
+                check_clean(f"{name}[{i}]", lookup_st(l, st), st)
+        case LocsVal(_):
+            raise RuntimeError(
+                f"ERROR:Non-clean termination: field '{name}' is a live object (expected nil)")
+        case _:
+            raise RuntimeError(
+                f"ERROR:Non-clean termination: field '{name}' is not clean")
+
+
+def lookup_output(cid: str, clist: list[CDecl]) -> list[str]:
+    """Return the output-field names declared on class cid (empty if none)."""
+    for c in clist:
+        if c.name == cid:
+            return c.output
+    return []
 
 
 def lookup_class_map(clist: list[CDecl], cid: str) -> CDecl:
@@ -723,5 +761,21 @@ def eval_prog(prog: Prog, library: Prog | None = None) -> list[tuple[str, Value]
     env = gen_env(fid)
     st = gen_st(env, ObjVal(mid, env))
     st2 = eval_state(mainstml, env, map_, st)
-    result = gen_result(env, st2)
-    return [(k, v) for k, v in result if k != "this"]
+
+    output = lookup_output(mid, lib_classes + prog.classes)
+    if output:
+        # Validate that every declared output is an actual field of the class.
+        for name in output:
+            if name not in fid:
+                raise RuntimeError(
+                    f"ERROR:output field '{name}' is not a field of class {mid}")
+        # Every non-output field must be cleanly consumed (Janus-style clean
+        # termination). This makes clean termination an enforced check rather
+        # than a tautology.
+        output_set = set(output)
+        for name in fid:
+            if name not in output_set:
+                check_clean(name, lookup_st(lookup_envs(name, env), st2), st2)
+        return gen_result(env, st2, only=output_set)
+
+    return gen_result(env, st2)

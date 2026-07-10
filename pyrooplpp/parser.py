@@ -529,6 +529,16 @@ class Parser:
             methods.append(self.parse_methdec())
         return methods
 
+    def parse_output(self) -> list[str]:
+        """Parse zero or more `output id (, id)*` declaration lines."""
+        names: list[str] = []
+        while self.at(TT.OUTPUT):
+            self.advance()
+            names.append(self.expect(TT.ID).value)
+            while self.match(TT.COMMA):
+                names.append(self.expect(TT.ID).value)
+        return names
+
     def parse_class(self) -> CDecl:
         self.expect(TT.CLASS)
         name = self.expect(TT.ID).value
@@ -536,8 +546,9 @@ class Parser:
         if self.match(TT.INHERITS):
             inherits = self.expect(TT.ID).value
         fields = self.parse_vardecs()
+        output = self.parse_output()
         methods = self.parse_methdecs()
-        return CDecl(name, inherits, fields, methods)
+        return CDecl(name, inherits, fields, methods, output)
 
     def parse_prog(self) -> Prog:
         classes = []
